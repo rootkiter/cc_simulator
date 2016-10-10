@@ -47,9 +47,13 @@ class hexmap:
         return result
 
 def ErrorPrint(msg):
+    sys.stdout.flush()
+    sys.stdin.flush()
     print "[ Error ] %s" % (msg)
 
 def EGPrint(msg):
+    sys.stdout.flush()
+    sys.stdin.flush()
     print "[  EG   ] %s" % (msg)
 
 def typecheck(value,typestr):
@@ -320,6 +324,8 @@ def myConsole():
     try:
         while True:
             try:
+                sys.stdout.flush()
+                sys.stdin.flush()
                 x=str(raw_input(" cmd> "))
                 inputlist=x.split(" ")
                 inputbuf=[]
@@ -381,6 +387,8 @@ class botclients:
         self.clients.append(item)
 
     def sendData(self,data):
+        sys.stdout.flush()
+        sys.stdin.flush()
         print "---------> data be send <---------------"
         print str(hexmap(data))
         i=0
