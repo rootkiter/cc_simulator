@@ -16,7 +16,7 @@ class model(PackBase):
     }
     # if has ping_pong packet
     _pingcheck={
-        "cmdgroup":0x41414141,
+        "cmdgroup":5,
     }
 
     # cmd packet config
