@@ -26,12 +26,14 @@ class tablemap:
         self.titlelist={}
         self.item = {}
         self.itemnamelen=0
+        self.itemlist = []
 
     def additem(self,title,itemname,itemvalue):
         if(title not in self.titlelist):
             self.titlelist[title]=len(title)
         if(itemname not in self.item):
             self.item[itemname] = {}
+            self.itemlist.append(itemname)
         self.item[itemname][title]=str(itemvalue)
         if(self.titlelist[title] < len(str(itemvalue))):
             self.titlelist[title] = len(str(itemvalue))
@@ -44,14 +46,25 @@ class tablemap:
         if(itemList == None):
             formatString = "%%-%ds |" % self.itemnamelen
             result += formatString % itemname
-            for item in List:
-                formatString = " %%%ds |" % self.titlelist[item]
-                result += formatString % item
+            for citem in List:
+                if(citem.startswith('-')):
+                    item = citem[1::]
+                    formatString = " %%-%ds |" % self.titlelist[item]
+                else:
+                    item = citem
+                    formatString = " %%%ds |" % self.titlelist[item]
+                itembuf = (((self.titlelist[item] - len(item))/2)*' ')+item
+                result += formatString % (itembuf)
         else:
             formatString = "%%-%ds |" % self.itemnamelen
             result += formatString % itemname
-            for item in List:
-                formatString = " %%%ds |" % self.titlelist[item]
+            for citem in List:
+                if(citem.startswith('-')):
+                    item = citem[1::]
+                    formatString = " %%-%ds |" % self.titlelist[item]
+                else:
+                    item = citem
+                    formatString = " %%%ds |" % self.titlelist[item]
                 try:
                     result += formatString % str(itemList[item])
                 except Exception, e:
@@ -70,15 +83,20 @@ class tablemap:
             List = titleList
         formatString += "%%%ds |" % self.itemnamelen
         lineK += self.itemnamelen*'-' + "-+"
-        for item in List:
-            formatString += " %%%ds |" % self.titlelist[item]
+        for citem in List:
+            if(citem.startswith('-')):
+                item=citem[1::]
+                formatString += " %%-%ds |" % self.titlelist[item]
+            else:
+                item=citem
+                formatString += " %%%ds |" % self.titlelist[item]
             lineK += "-"+ self.titlelist[item]*'-' + "-+"
 
         result += lineK +"\n"
         result += self.getItemString(List,"") + "\n"
 
         result += lineK +"\n"
-        for item in self.item:
+        for item in self.itemlist:
             try:
                 result += self.getItemString(List,item,self.item[item]) +"\n"
             except Exception, e:
@@ -171,6 +189,12 @@ class hexmap:
         result += "-----> packet size :hex(0x%x),ord(%d) <-------" % (len(self.string),len(self.string))
         return result
 
+def addlinehead(data,linehead):
+    result = ""
+    for line in data.split("\n"):
+        result += linehead+line+"\n"
+    return result
+
 class PackBase:
     def __init__(self):
         pass
@@ -243,18 +267,69 @@ class PackBase:
         if(not self.isPingPong(data)):
             ConsolePrint( str(hexmap(data)))
 
-    def help_page(self,args):
-        result = ""
-        if(len(self._testcase)>0):
-            result += "testcase Table\n"
+    def showfields(self,cmdname=None):
+        result = "Fields Tables:\n"
+        if(self.envcheck("_cmd_members")
+            and self.envcheck("_testcase")
+        ):
             tbmap = tablemap()
-            maxlen = 0
-            for item in self._testcase:
-                if(maxlen<len(self._testcase[item]['fieldname'])):
-                    maxlen = len(self._testcase[item]['fieldname'])
-                for idk in range(0,len(self._testcase[item]['fieldname'])):
-                    tbmap.additem(str(idk),item,self._testcase[item]['fieldname'][idk])
-            result += tbmap.printMap(map(lambda x: str(x),range(0,maxlen)))
+            fieldslist = []
+            if(cmdname != None and cmdname in self._testcase):
+                fieldslist = self._testcase[cmdname]['fieldname']
+            else:
+                fieldslist = self._cmd_members.keys()
+
+            showlist = []
+            for item in fieldslist:
+                value = self._cmd_members[item]
+                showlist .append([value[1],item,value[2]])
+            showlist = sorted(showlist,key = lambda s:s[0])
+            for item in showlist:
+                tbmap.additem('hex'  ,item[1],"+0x%x" % eval(str(item[0])))
+                tbmap.additem('ord'  ,item[1],  "+%d" % eval(str(item[0])))
+                tbmap.additem('value',item[1],  "%s" % str(item[2]))
+            result += addlinehead(tbmap.printMap(['-hex','-ord','-value']),"    ")
+        return result
+                    
+    def showfixvalue(self,cmdname):
+        result = ""
+        if(self.envcheck("_cmd_members")
+            and self.envcheck("_testcase")
+            and cmdname in self._testcase
+            and 'valuefix' in (self._testcase[cmdname])
+        ):
+            result += "FixValue Table:\n"
+            tbmap = tablemap()
+            for item in self._testcase[cmdname]['valuefix']:
+                tbmap.additem('fix_value',item,str(self._testcase[cmdname]['valuefix'][item]))
+            result += addlinehead(tbmap.printMap(['-fix_value']),"    ")
+        return result
+
+    def showtestcase(self,cmdname = None):
+        result = ""
+        if(self.envcheck("_cmd_members")
+            and self.envcheck("_testcase")
+        ):
+            result += "TestCase :\n"
+            tbmap = tablemap()
+            if(cmdname == None):
+                for item in self._testcase:
+                    tbmap.additem("fieldslist",item,str(self._testcase[item]['fieldname']))
+            else:
+                tbmap.additem("fieldslist",cmdname,str(self._testcase[cmdname]['fieldname']))
+            result += addlinehead(tbmap.printMap(['-fieldslist']),"    ")
+        return result
+
+    def help_page(self,cmdname=None):
+        result = ""
+        result += self.showfields(cmdname)
+        return result
+    
+    def show_page(self,cmdname=None):
+        result = ""
+        result += self.showfields(cmdname)
+        if(cmdname != None):
+            result += self.showfixvalue(cmdname)
         return result
 
 class MyThread(threading.Thread):
@@ -281,9 +356,7 @@ class MyThread(threading.Thread):
                 self.function(args)
 
     def stop(self):
-        print "thread stop"
         self.runflag = False
-        print "thread stop ok"
 
 class MySocketServer:
     def __init__(self,port,handle,maxlisten=10000):
@@ -363,7 +436,6 @@ class MySocketServer:
         if(self.ServerThread):
             self.ServerThread.stop()
         if(self.socket):
-            print "try close socekt"
             self.socket.close()
 
 class MainControl:
@@ -378,9 +450,34 @@ class MainControl:
     def has_cmd(self,cmdname):
         return self.simulator.has_cmd_name(cmdname)
 
-    def help_page(self):
-        return self.simulator.help_page(self.args)
+    def setArgs(self,payload,value):
+        self.args[payload]=value
 
+    def removeArgs(self,payload):
+        if(payload in self.args):
+            self.args.pop(payload)
+
+    def help_page(self,cmdname=None):
+        result = "Commands Table:\n"
+        tbmap = tablemap()
+        tbmap.additem("infomation","reload","Reload the config file.")
+        tbmap.additem("infomation","set","Set Payload Value.")
+        tbmap.additem("infomation","unset","Cancel Payload Value.")
+        tbmap.additem("infomation","show","Show Payload Values.")
+        tbmap.additem("infomation","help","This Help Page.")
+        result += addlinehead( tbmap.printMap(),"    ")
+        result += self.simulator.showtestcase(cmdname)
+        return result
+
+    def show_page(self,cmdname=None):
+        result = self.simulator.show_page(cmdname)
+        if(len(self.args)>0):
+            tbmap = tablemap()
+            result += "Set Value Table:\n"
+            for item in self.args:
+                tbmap.additem("Set Value",item,self.args[item])
+            result += addlinehead( tbmap.printMap(["-Set Value"]),"    ")
+        return result
 
     def re_load(self):
         try:
@@ -433,8 +530,27 @@ def MainConsole(model_path,port):
                 main_ctrl.re_load()
                 continue
             elif(cmdargs[0] == 'help'):
-                ConsolePrint(main_ctrl.help_page())
+                if(len(cmdargs)>1):
+                    ConsolePrint(main_ctrl.help_page(cmdargs[1]))
+                else:
+                    ConsolePrint(main_ctrl.help_page())
                 continue
+            elif(cmdargs[0] == 'show'):
+                if(len(cmdargs)>1):
+                    ConsolePrint(main_ctrl.show_page(cmdargs[1]))
+                else:
+                    ConsolePrint(main_ctrl.show_page())
+                continue
+            elif(cmdargs[0] == 'set'):
+                if(len(cmdargs)!=3):
+                    Eprint("RE Check the command")
+                else:
+                    main_ctrl.setArgs(cmdargs[1],cmdargs[2])
+            elif(cmdargs[0] == 'unset'):
+                if(len(cmdargs)!=2):
+                    Eprint("RE Check the command")
+                else:
+                    main_ctrl.removeArgs(cmdargs[1])
             else:
                 if(main_ctrl.has_cmd(cmdargs[0])):
                     flag =  main_ctrl.send_cmd_packet(cmdargs[0])
@@ -476,8 +592,6 @@ if __name__=='__main__2':
     thread.stop()
 
 if __name__=='__main__':
-    print "Hello World ! "
-    print sys.argv
     if(len(sys.argv) != 3):
         print sys.argv[0],'[model_path] [port]'
         exit()
