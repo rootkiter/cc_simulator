@@ -21,6 +21,71 @@ def ErrorPrint(string):
         logstr += "[ERROR] %s\n" % str(item)
     ConsolePrint(logstr)
 
+class tablemap:
+    def __init__(self):
+        self.titlelist={}
+        self.item = {}
+        self.itemnamelen=0
+
+    def additem(self,title,itemname,itemvalue):
+        if(title not in self.titlelist):
+            self.titlelist[title]=len(title)
+        if(itemname not in self.item):
+            self.item[itemname] = {}
+        self.item[itemname][title]=str(itemvalue)
+        if(self.titlelist[title] < len(str(itemvalue))):
+            self.titlelist[title] = len(str(itemvalue))
+        if(len(itemname) > self.itemnamelen):
+            self.itemnamelen = len(itemname)
+        return True
+
+    def getItemString(self,List,itemname,itemList=None):
+        result = "| "
+        if(itemList == None):
+            formatString = "%%-%ds |" % self.itemnamelen
+            result += formatString % itemname
+            for item in List:
+                formatString = " %%%ds |" % self.titlelist[item]
+                result += formatString % item
+        else:
+            formatString = "%%-%ds |" % self.itemnamelen
+            result += formatString % itemname
+            for item in List:
+                formatString = " %%%ds |" % self.titlelist[item]
+                try:
+                    result += formatString % str(itemList[item])
+                except Exception, e:
+                    result += formatString % ""
+        return result
+
+    def printMap(self,titleList=None):
+        result = ""
+        formatString = "| "
+        lineK        = "+-"
+        List = []
+        if(titleList == None):
+            for item in self.titlelist :
+                List .append(item)
+        else:
+            List = titleList
+        formatString += "%%%ds |" % self.itemnamelen
+        lineK += self.itemnamelen*'-' + "-+"
+        for item in List:
+            formatString += " %%%ds |" % self.titlelist[item]
+            lineK += "-"+ self.titlelist[item]*'-' + "-+"
+
+        result += lineK +"\n"
+        result += self.getItemString(List,"") + "\n"
+
+        result += lineK +"\n"
+        for item in self.item:
+            try:
+                result += self.getItemString(List,item,self.item[item]) +"\n"
+            except Exception, e:
+                str(e)
+        result += lineK +"\n"
+        return result
+
 def itembuild(mtype,value):
     result = ""
     if(mtype == 'str'):
@@ -133,6 +198,14 @@ class PackBase:
                 return False
         return True
 
+    def has_cmd_name(self,cmdname):
+        if(self.envcheck("_cmd_members")
+            and self.envcheck("_cmdlen")
+            and self.envcheck("_testcase")
+            and self.checkcase(cmdname)):
+                return True
+        return False
+
     def buildcmd(self,cmdname,args):
         if(self.envcheck("_cmd_members") 
             and self.envcheck("_cmdlen") 
@@ -167,11 +240,22 @@ class PackBase:
         return True
 
     def on_recv(self,socket,data):
-        print "recv -> " ,str(data)
         if(not self.isPingPong(data)):
-            ConsolePrint( str(data))
-        else:
-            print "recv a pingpong"
+            ConsolePrint( str(hexmap(data)))
+
+    def help_page(self,args):
+        result = ""
+        if(len(self._testcase)>0):
+            result += "testcase Table\n"
+            tbmap = tablemap()
+            maxlen = 0
+            for item in self._testcase:
+                if(maxlen<len(self._testcase[item]['fieldname'])):
+                    maxlen = len(self._testcase[item]['fieldname'])
+                for idk in range(0,len(self._testcase[item]['fieldname'])):
+                    tbmap.additem(str(idk),item,self._testcase[item]['fieldname'][idk])
+            result += tbmap.printMap(map(lambda x: str(x),range(0,maxlen)))
+        return result
 
 class MyThread(threading.Thread):
     def __init__(self,function):
@@ -208,7 +292,7 @@ class MySocketServer:
         self.socket = None
         self.handle = handle
         self.ServerThread = None
-        self.maxrecvlen   = 1024
+        self.maxrecvlen   = 10240
         self.clients = []
 
     def startServer(self):
@@ -247,7 +331,6 @@ class MySocketServer:
                             clients.remove(r)
                             r.close()
                         elif (not newconnect):
-                            print "new msg here"
                             args['self'].on_recv(r,data)
                         else:
                             pass
@@ -291,6 +374,13 @@ class MainControl:
         self.config = None
         self.re_load()
         self.args = {}
+
+    def has_cmd(self,cmdname):
+        return self.simulator.has_cmd_name(cmdname)
+
+    def help_page(self):
+        return self.simulator.help_page(self.args)
+
 
     def re_load(self):
         try:
@@ -342,8 +432,14 @@ def MainConsole(model_path,port):
             elif(cmdargs[0] == 'reload'):
                 main_ctrl.re_load()
                 continue
+            elif(cmdargs[0] == 'help'):
+                ConsolePrint(main_ctrl.help_page())
+                continue
             else:
-                flag =  main_ctrl.send_cmd_packet("stateCheck")
+                if(main_ctrl.has_cmd(cmdargs[0])):
+                    flag =  main_ctrl.send_cmd_packet(cmdargs[0])
+                else:
+                    Eprint("RE Check the command")
         except Exception,e:
             print str(e)
 
