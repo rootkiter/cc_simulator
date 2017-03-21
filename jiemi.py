@@ -94,7 +94,47 @@ class model(PackBase):
     }
 
     _samples={
-        'A16A281CBE544AF40F8463C7F5186496',
-        '6500E8925CAB0F62E4F80CD9C9582C9A',
-        'BEB44950D87C418FF08E00D0C20326E0',
+        'A16A281CBE544AF40F8463C7F5186496':{"C&C1":"bak.hnhxzz.com,bak1.hnhxzz.com,dd.1ddos.pw,192.154.108.2:77"},
+        '6500E8925CAB0F62E4F80CD9C9582C9A':{"C&C1":"bak2.hnhxzz.com,162.250.140.82"},
+        'BEB44950D87C418FF08E00D0C20326E0':{"112.168.11.161:999"},
     }
+
+    otherinfo='''
+    /*
+     * ==========================================================
+     *
+     *       Filename:  main.c
+     *         Author:  rootkiter
+     *         E-Mail:  rootkiter@rootkiter.com
+     *
+     * ==========================================================
+     */
+    #include "stdio.h"
+    #include <string.h>
+
+    int jiemihttp(char *table){
+        int len = strlen(table);
+        for(int i=0;i<len;i++){
+            if(i%3){
+                table[i] += i%3;
+            }
+            else{
+                table[i] -- ;
+            }
+        }
+        return 1;
+    }
+
+    int main(){
+        /// file_md5 = BEB44950D87C418FF08E00D0C20326E0
+        char table[]="\x63\x60\x69\x2F\x67\x6C\x69\x77\x78\x7B\x2D\x61\x70\x6C\x2D\x6A\x6F\x2F\x2F\x73\x76\x75";
+        int res = jiemihttp(table);
+        printf("%d\n",res);
+        printf("%s\n",table);
+        /// jiemi result = "bak.hnhxzz.com/ip1.txt"
+        /// $ wget bak.hnhxzz.com/ip1.txt
+        /// $ cat ip1.txt
+        /// !@#112.168.11.161:999
+        return 0;
+    }
+    '''

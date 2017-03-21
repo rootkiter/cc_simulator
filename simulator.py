@@ -170,7 +170,7 @@ class hexmap:
             elif ord(char)==0:
                 charbuf+='.'
             else:
-                charbuf+="\xff"
+                charbuf+="*"
 
             hexdata+="%02x" % (ord(char))
             offset+=1
@@ -465,7 +465,7 @@ class MainControl:
         tbmap.additem("infomation","unset","Cancel Payload Value.")
         tbmap.additem("infomation","show","Show Payload Values.")
         tbmap.additem("infomation","help","This Help Page.")
-        result += addlinehead( tbmap.printMap(),"    ")
+        result += addlinehead( tbmap.printMap(['-infomation']),"    ")
         result += self.simulator.showtestcase(cmdname)
         return result
 
